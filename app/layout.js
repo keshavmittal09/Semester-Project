@@ -1,0 +1,32 @@
+import "./globals.css";
+import Sidebar from "../components/Sidebar";
+import Topbar from "../components/Topbar";
+import { ThemeProvider } from "../components/ThemeProvider";
+import ChatWidget from "../components/ChatWidget";
+
+export const metadata = {
+    title: "MedAI Diagnostics — AI-Powered Healthcare Intelligence",
+    description: "Award-winning AI-driven healthcare diagnostic platform with explainable AI, symptom analysis, and transparent clinical reasoning.",
+    keywords: "AI healthcare, diagnostics, explainable AI, XAI, symptom checker, medical AI",
+};
+
+export default function RootLayout({ children }) {
+    return (
+        <html lang="en" suppressHydrationWarning>
+            <body>
+                <ThemeProvider>
+                    <div className="app-shell">
+                        <Sidebar />
+                        <div className="main-area">
+                            <Topbar />
+                            <div className="content-area">
+                                {children}
+                            </div>
+                        </div>
+                    </div>
+                    <ChatWidget />
+                </ThemeProvider>
+            </body>
+        </html>
+    );
+}
