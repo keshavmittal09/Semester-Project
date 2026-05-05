@@ -6,7 +6,8 @@ export default function ProfilePage() {
     const [historyCount, setHistoryCount] = useState(0);
 
     useEffect(() => {
-        fetch('http://localhost:8000/history')
+        const API_URL = process.env.NEXT_PUBLIC_API_URL || 'http://localhost:8000';
+        fetch(`${API_URL}/history`)
             .then(res => res.json())
             .then(data => setHistoryCount(data.count || 0))
             .catch(() => setHistoryCount(0));

@@ -189,7 +189,8 @@ export default function DiagnosisReport({ report }) {
 }
 
 function submitFeedback(isAccurate) {
-    fetch('http://localhost:8000/feedback', {
+    const API_URL = process.env.NEXT_PUBLIC_API_URL || 'http://localhost:8000';
+    fetch(`${API_URL}/feedback`, {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({ is_accurate: isAccurate, rating: isAccurate ? 5 : 2 })
