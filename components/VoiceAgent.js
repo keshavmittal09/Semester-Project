@@ -4,7 +4,7 @@ import { Phone, PhoneOff, Loader2, Bot } from 'lucide-react';
 import Vapi from '@vapi-ai/web';
 
 const API = process.env.NEXT_PUBLIC_API_URL || 'http://localhost:8000';
-const VAPI_KEY = process.env.NEXT_PUBLIC_VAPI_KEY || '583fb2b4-8b91-4a68-b415-26cca9c1219e';
+const VAPI_KEY = process.env.NEXT_PUBLIC_VAPI_KEY;
 
 const vapi = new Vapi(VAPI_KEY);
 
