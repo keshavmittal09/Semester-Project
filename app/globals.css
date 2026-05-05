@@ -1830,3 +1830,108 @@ img {
     right: 16px;
   }
 }
+
+/* === VAPI VOICE AGENT UI === */
+.voice-agent-container {
+  position: fixed;
+  bottom: 24px;
+  right: 90px;
+  z-index: 9999;
+}
+
+.voice-fab {
+  width: auto;
+  padding: 12px 24px;
+  border-radius: 32px;
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  font-weight: 600;
+  font-size: 16px;
+  background: linear-gradient(135deg, var(--accent), var(--purple));
+  color: white;
+  border: none;
+  cursor: pointer;
+  box-shadow: 0 8px 24px rgba(10, 132, 255, 0.4);
+  transition: all 0.3s ease;
+}
+
+.voice-fab:hover {
+  transform: translateY(-2px);
+  box-shadow: 0 12px 32px rgba(10, 132, 255, 0.5);
+}
+
+.voice-fab.active-call-btn {
+  background: #ff3b30;
+  box-shadow: 0 8px 24px rgba(255, 59, 48, 0.4);
+  animation: pulse-red 2s infinite;
+}
+
+.fab-text {
+  white-space: nowrap;
+}
+
+.spinner {
+  animation: spin 1s linear infinite;
+}
+
+@keyframes spin {
+  100% { transform: rotate(360deg); }
+}
+
+@keyframes pulse-red {
+  0% { box-shadow: 0 0 0 0 rgba(255, 59, 48, 0.4); }
+  70% { box-shadow: 0 0 0 10px rgba(255, 59, 48, 0); }
+  100% { box-shadow: 0 0 0 0 rgba(255, 59, 48, 0); }
+}
+
+.vapi-active-call {
+  position: absolute;
+  bottom: 80px;
+  right: 0;
+  width: 280px;
+  height: 320px;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  background: rgba(255, 255, 255, 0.85);
+  backdrop-filter: blur(24px);
+  -webkit-backdrop-filter: blur(24px);
+  box-shadow: 0 12px 48px rgba(0, 0, 0, 0.12), 0 0 0 1px rgba(0, 0, 0, 0.05);
+  z-index: 10;
+  border-radius: 16px;
+}
+
+[data-theme='dark'] .vapi-active-call {
+  background: rgba(28, 28, 30, 0.85);
+}
+
+.vapi-active-call p {
+  margin-top: 24px;
+  font-size: 14px;
+  font-weight: 500;
+  color: var(--text-secondary);
+}
+
+.vapi-orb {
+  position: absolute;
+  width: 80px;
+  height: 80px;
+  border-radius: 50%;
+  background: radial-gradient(circle, rgba(10, 132, 255, 0.2) 0%, rgba(10, 132, 255, 0) 70%);
+  transition: transform 0.1s ease-out;
+  z-index: 11;
+}
+
+.vapi-orb-core {
+  width: 64px;
+  height: 64px;
+  border-radius: 50%;
+  background: linear-gradient(135deg, var(--accent), var(--purple));
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  z-index: 12;
+  box-shadow: 0 8px 24px rgba(10, 132, 255, 0.4);
+}

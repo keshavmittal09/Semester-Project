@@ -4,6 +4,7 @@ import Topbar from "../components/Topbar";
 import { ThemeProvider } from "../components/ThemeProvider";
 import Script from "next/script";
 import ChatWidget from "../components/ChatWidget";
+import VoiceAgent from "../components/VoiceAgent";
 
 export const metadata = {
     title: "MedAI Diagnostics — AI-Powered Healthcare Intelligence",
@@ -26,6 +27,7 @@ export default function RootLayout({ children }) {
                         </div>
                     </div>
                     <ChatWidget />
+                    <VoiceAgent />
                 </ThemeProvider>
                 <div id="google_translate_element" style={{ display: 'none' }}></div>
                 <Script id="google-translate-init" strategy="afterInteractive">
