@@ -1,90 +1,90 @@
 {
-  "accuracy": 0.7583,
-  "precision_weighted": 0.7514,
-  "recall_weighted": 0.7583,
-  "f1_weighted": 0.7525,
-  "cross_val_mean": 0.7488,
-  "cross_val_std": 0.0135,
+  "accuracy": 0.7325,
+  "precision_weighted": 0.7259,
+  "recall_weighted": 0.7325,
+  "f1_weighted": 0.7287,
+  "cross_val_mean": 0.7272,
+  "cross_val_std": 0.0046,
   "confusion_matrix": [
     [
-      85,
-      6,
-      3,
+      90,
+      13,
+      14,
       0,
+      4,
       1,
-      0,
       25,
-      0
+      3
     ],
     [
       7,
-      46,
+      65,
+      5,
+      1,
+      38,
       2,
-      4,
-      33,
-      0,
-      22,
-      6
+      27,
+      5
     ],
     [
-      8,
-      4,
-      102,
-      2,
+      6,
+      3,
+      134,
       0,
       1,
-      0,
+      2,
+      1,
       3
     ],
     [
       0,
-      0,
-      0,
-      119,
-      0,
       1,
       0,
-      0
+      140,
+      0,
+      8,
+      0,
+      1
     ],
     [
-      0,
-      15,
-      0,
       1,
-      89,
+      30,
+      2,
       0,
-      5,
-      10
+      100,
+      0,
+      6,
+      11
     ],
     [
-      0,
-      0,
       1,
       0,
       0,
-      117,
+      4,
+      0,
+      143,
       0,
       2
     ],
     [
-      29,
-      12,
-      0,
-      0,
-      5,
+      38,
+      21,
       2,
-      71,
-      1
+      2,
+      6,
+      1,
+      78,
+      2
     ],
     [
-      0,
-      1,
-      9,
-      1,
-      5,
+      4,
+      4,
       4,
       1,
-      99
+      7,
+      1,
+      0,
+      129
     ]
   ],
   "class_names": [
@@ -99,56 +99,56 @@
   ],
   "per_class_metrics": {
     "Acute Bronchitis": {
-      "precision": 0.6589,
-      "recall": 0.7083,
-      "f1_score": 0.6827,
-      "support": 120
+      "precision": 0.6122,
+      "recall": 0.6,
+      "f1_score": 0.6061,
+      "support": 150
     },
     "COVID-19": {
-      "precision": 0.5476,
-      "recall": 0.3833,
-      "f1_score": 0.451,
-      "support": 120
+      "precision": 0.4745,
+      "recall": 0.4333,
+      "f1_score": 0.453,
+      "support": 150
     },
     "Common Cold": {
-      "precision": 0.8718,
-      "recall": 0.85,
-      "f1_score": 0.8608,
-      "support": 120
+      "precision": 0.8323,
+      "recall": 0.8933,
+      "f1_score": 0.8617,
+      "support": 150
     },
     "Gastroenteritis": {
-      "precision": 0.937,
-      "recall": 0.9917,
-      "f1_score": 0.9636,
-      "support": 120
+      "precision": 0.9459,
+      "recall": 0.9333,
+      "f1_score": 0.9396,
+      "support": 150
     },
     "Influenza": {
-      "precision": 0.6692,
-      "recall": 0.7417,
-      "f1_score": 0.7036,
-      "support": 120
+      "precision": 0.641,
+      "recall": 0.6667,
+      "f1_score": 0.6536,
+      "support": 150
     },
     "Migraine": {
-      "precision": 0.936,
-      "recall": 0.975,
-      "f1_score": 0.9551,
-      "support": 120
+      "precision": 0.9051,
+      "recall": 0.9533,
+      "f1_score": 0.9286,
+      "support": 150
     },
     "Pneumonia": {
-      "precision": 0.5726,
-      "recall": 0.5917,
-      "f1_score": 0.582,
-      "support": 120
+      "precision": 0.5693,
+      "recall": 0.52,
+      "f1_score": 0.5436,
+      "support": 150
     },
     "Strep Pharyngitis": {
-      "precision": 0.8182,
-      "recall": 0.825,
-      "f1_score": 0.8216,
-      "support": 120
+      "precision": 0.8269,
+      "recall": 0.86,
+      "f1_score": 0.8431,
+      "support": 150
     }
   },
-  "n_training_samples": 3840,
-  "n_test_samples": 960,
+  "n_training_samples": 4800,
+  "n_test_samples": 1200,
   "n_features": 15,
   "feature_names": [
     "fever",
@@ -167,7 +167,7 @@
     "diarrhea",
     "joint_pain"
   ],
-  "model_type": "RandomForestClassifier",
+  "model_type": "VotingClassifier (RandomForest + XGBoost)",
   "n_estimators": 200,
-  "data_source": "Clinical literature (Harrison's, Merck Manual, WHO ICD-11)"
+  "data_source": "Clinical literature (Harrison's, Merck Manual, WHO ICD-11, CDC)"
 }

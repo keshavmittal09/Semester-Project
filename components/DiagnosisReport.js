@@ -169,7 +169,29 @@ export default function DiagnosisReport({ report }) {
                     )}
                 </div>
             </div>
-            <div className="disclaimer"><strong>⚠ Medical Disclaimer:</strong> AI-generated analysis for educational/demonstration purposes only. Not medical advice. Consult a healthcare professional.</div>
+
+            <div className="card anim-fadeInUp anim-delay-3" style={{ background: 'var(--gray-50)', padding: '16px 24px', display: 'flex', flexDirection: 'column', gap: 12 }}>
+                <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
+                    <div>
+                        <h4 style={{ fontSize: 13, fontWeight: 600 }}>Help us improve</h4>
+                        <p style={{ fontSize: 11, color: 'var(--text-tertiary)' }}>Was this AI diagnosis accurate based on your knowledge?</p>
+                    </div>
+                    <div style={{ display: 'flex', gap: 8 }}>
+                        <button onClick={() => submitFeedback(true)} style={{ padding: '6px 12px', borderRadius: 16, border: '1px solid var(--gray-200)', background: 'white', cursor: 'pointer', fontSize: 12, fontWeight: 500 }}>👍 Yes</button>
+                        <button onClick={() => submitFeedback(false)} style={{ padding: '6px 12px', borderRadius: 16, border: '1px solid var(--gray-200)', background: 'white', cursor: 'pointer', fontSize: 12, fontWeight: 500 }}>👎 No</button>
+                    </div>
+                </div>
+            </div>
+
+            <div className="disclaimer"><strong>⚠ Medical Disclaimer:</strong> {report.disclaimer || "AI-generated analysis for educational purposes only. Not medical advice. Consult a healthcare professional."}</div>
         </div>
     );
+}
+
+function submitFeedback(isAccurate) {
+    fetch('http://localhost:8000/feedback', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ is_accurate: isAccurate, rating: isAccurate ? 5 : 2 })
+    }).then(() => alert('Thank you for your feedback!'));
 }

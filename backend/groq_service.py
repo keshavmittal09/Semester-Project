@@ -115,3 +115,38 @@ def _assess_severity(prediction):
     high = {"Pneumonia", "COVID-19", "Acute Bronchitis"}
     moderate = {"Influenza", "Gastroenteritis", "Strep Throat"}
     return "High" if prediction["predicted_disease"] in high else "Moderate" if prediction["predicted_disease"] in moderate else "Low"
+
+async def extract_symptoms_via_llm(symptoms_text, valid_symptoms_list):
+    """Uses Groq LLM to extract standard clinical symptoms from raw user input (Hinglish, typos, etc.)."""
+    if not is_groq_configured():
+        return None
+    
+    try:
+        client = Groq(api_key=GROQ_API_KEY)
+        prompt = f"""You are a clinical NLP engine. Extract all the medical symptoms from the following raw user text (which may contain Hindi, English, Hinglish, or typos).
+        
+Raw text: "{symptoms_text}"
+
+You MUST map the user's symptoms ONLY to the following exact list of allowed symptoms:
+{valid_symptoms_list}
+
+Return ONLY a JSON object with a single key 'symptoms' containing an array of strings of the matched symptoms from the allowed list. Do not include any symptoms outside this list. If none match, return {{"symptoms": []}}.
+Example output: {{"symptoms": ["headache", "nausea"]}}
+"""
+        response = client.chat.completions.create(
+            model="llama-3.3-70b-versatile",
+            messages=[
+                {"role": "system", "content": "You are a JSON-only API. Output ONLY valid JSON."},
+                {"role": "user", "content": prompt}
+            ],
+            temperature=0.1,
+            max_tokens=150,
+            response_format={"type": "json_object"}
+        )
+        
+        content = response.choices[0].message.content.strip()
+        data = json.loads(content)
+        return data.get("symptoms", [])
+    except Exception as e:
+        print(f"⚠️ Groq NLP Extraction failed: {e}")
+        return None

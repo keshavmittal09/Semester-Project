@@ -6,8 +6,16 @@ export default function HistoryPage() {
     const [history, setHistory] = useState([]);
 
     useEffect(() => {
-        const data = JSON.parse(sessionStorage.getItem('diagnosisHistory') || '[]');
-        setHistory(data);
+        // Fetch from backend API
+        fetch('http://localhost:8000/history')
+            .then(res => res.json())
+            .then(data => setHistory(data.history || []))
+            .catch(err => {
+                console.error("Failed to fetch history from server:", err);
+                // Fallback to local
+                const local = JSON.parse(sessionStorage.getItem('diagnosisHistory') || '[]');
+                setHistory(local);
+            });
     }, []);
 
     const clearHistory = () => {

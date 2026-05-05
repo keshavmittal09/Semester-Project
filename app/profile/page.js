@@ -1,98 +1,84 @@
 "use client";
+import { User, Mail, Shield, Clock, FileText, Settings, Activity, Languages } from 'lucide-react';
 import { useState, useEffect } from 'react';
-import { User, Mail, Phone, Save, BarChart3, Clock, Shield, Activity } from 'lucide-react';
 
 export default function ProfilePage() {
-    const [profile, setProfile] = useState({ name: '', email: '', phone: '', organization: '' });
-    const [stats, setStats] = useState({ total: 0, thisWeek: 0 });
-    const [saved, setSaved] = useState(false);
+    const [historyCount, setHistoryCount] = useState(0);
 
     useEffect(() => {
-        const stored = localStorage.getItem('userProfile');
-        if (stored) setProfile(JSON.parse(stored));
-        const history = JSON.parse(sessionStorage.getItem('diagnosisHistory') || '[]');
-        const now = new Date();
-        const weekAgo = new Date(now - 7 * 24 * 60 * 60 * 1000);
-        setStats({
-            total: history.length,
-            thisWeek: history.filter(h => new Date(h.timestamp) > weekAgo).length,
-        });
+        fetch('http://localhost:8000/history')
+            .then(res => res.json())
+            .then(data => setHistoryCount(data.count || 0))
+            .catch(() => setHistoryCount(0));
     }, []);
 
-    const handleSave = () => {
-        localStorage.setItem('userProfile', JSON.stringify(profile));
-        setSaved(true);
-        setTimeout(() => setSaved(false), 2000);
-    };
-
-    const update = (key, val) => setProfile(p => ({ ...p, [key]: val }));
-
     return (
-        <div className="anim-fadeInUp">
-            <div className="page-header">
-                <h2>Profile</h2>
-                <p>Manage your account and view diagnostic statistics.</p>
+        <div className="anim-fadeIn" style={{ maxWidth: 800, margin: '0 auto', display: 'flex', flexDirection: 'column', gap: 24 }}>
+            <div className="card" style={{ display: 'flex', alignItems: 'center', gap: 24, padding: 32 }}>
+                <div style={{ width: 80, height: 80, borderRadius: '50%', background: 'linear-gradient(135deg, var(--accent), var(--purple))', display: 'flex', alignItems: 'center', justifyContent: 'center', color: 'white', fontSize: 32, fontWeight: 600 }}>
+                    K
+                </div>
+                <div>
+                    <h1 style={{ fontSize: 24, fontWeight: 700, marginBottom: 4 }}>Keshav Mittal</h1>
+                    <p style={{ color: 'var(--text-secondary)', display: 'flex', alignItems: 'center', gap: 6 }}>
+                        <Mail size={14} /> keshav.mittal@example.com
+                    </p>
+                    <div style={{ display: 'flex', gap: 8, marginTop: 12 }}>
+                        <span className="pill-high"><Shield size={12} /> Verified Patient</span>
+                        <span className="pill-moderate"><Activity size={12} /> MedAI Premium</span>
+                    </div>
+                </div>
             </div>
 
-            <div className="profile-grid">
-                {/* User Info */}
-                <div className="profile-card">
-                    <div className="profile-avatar-large">{profile.name ? profile.name[0].toUpperCase() : 'U'}</div>
-                    <div className="profile-field">
-                        <label>Full Name</label>
-                        <input className="profile-input" value={profile.name} onChange={e => update('name', e.target.value)} placeholder="Enter your name" />
+            <div className="stats-grid">
+                <div className="stat-card">
+                    <div className="stat-icon blue"><Clock size={16} /></div>
+                    <div className="stat-info">
+                        <h4>Total Diagnoses</h4>
+                        <div className="stat-value">{historyCount}</div>
                     </div>
-                    <div className="profile-field">
-                        <label>Email</label>
-                        <input className="profile-input" type="email" value={profile.email} onChange={e => update('email', e.target.value)} placeholder="you@example.com" />
-                    </div>
-                    <div className="profile-field">
-                        <label>Phone</label>
-                        <input className="profile-input" type="tel" value={profile.phone} onChange={e => update('phone', e.target.value)} placeholder="+1 234 567 8900" />
-                    </div>
-                    <div className="profile-field">
-                        <label>Organization</label>
-                        <input className="profile-input" value={profile.organization} onChange={e => update('organization', e.target.value)} placeholder="Hospital / Clinic" />
-                    </div>
-                    <button className="btn-save" onClick={handleSave} style={{ marginTop: 8 }}>
-                        <Save size={14} style={{ marginRight: 6, verticalAlign: 'middle' }} />
-                        {saved ? 'Saved ✓' : 'Save Profile'}
-                    </button>
                 </div>
+                <div className="stat-card">
+                    <div className="stat-icon green"><FileText size={16} /></div>
+                    <div className="stat-info">
+                        <h4>Saved Reports</h4>
+                        <div className="stat-value">{historyCount}</div>
+                    </div>
+                </div>
+                <div className="stat-card">
+                    <div className="stat-icon purple"><Settings size={16} /></div>
+                    <div className="stat-info">
+                        <h4>Account Settings</h4>
+                        <div className="stat-value" style={{ fontSize: 14, color: 'var(--accent)', cursor: 'pointer' }}>Manage</div>
+                    </div>
+                </div>
+            </div>
 
-                {/* Stats */}
+            <div className="card">
+                <h3 style={{ fontSize: 16, fontWeight: 600, marginBottom: 16 }}>Preferences</h3>
                 <div style={{ display: 'flex', flexDirection: 'column', gap: 16 }}>
-                    <div className="profile-card">
-                        <h4 style={{ fontSize: 16, fontWeight: 700, marginBottom: 20, letterSpacing: '-0.02em' }}>Diagnostic Activity</h4>
-                        <div className="stats-grid" style={{ gridTemplateColumns: '1fr 1fr' }}>
-                            <div className="stat-card">
-                                <div className="stat-icon blue"><BarChart3 size={16} /></div>
-                                <div className="stat-info"><h4>Total Diagnoses</h4><div className="stat-value">{stats.total}</div></div>
-                            </div>
-                            <div className="stat-card">
-                                <div className="stat-icon green"><Clock size={16} /></div>
-                                <div className="stat-info"><h4>This Week</h4><div className="stat-value">{stats.thisWeek}</div></div>
-                            </div>
+                    <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', paddingBottom: 16, borderBottom: '1px solid var(--gray-100)' }}>
+                        <div>
+                            <div style={{ fontWeight: 500 }}>Language / भाषा</div>
+                            <div style={{ fontSize: 13, color: 'var(--text-tertiary)' }}>Choose your preferred interface language</div>
+                        </div>
+                        <div style={{ display: 'flex', gap: 8 }}>
+                            <button className="btn-secondary active" style={{ display: 'flex', alignItems: 'center', gap: 6 }}><Languages size={14} /> English</button>
                         </div>
                     </div>
-
-                    <div className="profile-card">
-                        <h4 style={{ fontSize: 16, fontWeight: 700, marginBottom: 16, letterSpacing: '-0.02em' }}>System Info</h4>
-                        <div style={{ display: 'flex', flexDirection: 'column', gap: 10 }}>
-                            {[
-                                { label: 'ML Model', value: 'Random Forest (200 trees)', icon: Activity },
-                                { label: 'XAI Engine', value: 'SHAP TreeExplainer', icon: Shield },
-                                { label: 'LLM Provider', value: 'Groq (Llama 3.3 70B)', icon: BarChart3 },
-                                { label: 'Data Source', value: "Harrison's, Merck, WHO ICD-11", icon: Clock },
-                            ].map((item, i) => (
-                                <div key={i} style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', padding: '8px 0', borderBottom: '0.5px solid var(--gray-100)' }}>
-                                    <span style={{ fontSize: 13, color: 'var(--text-secondary)', display: 'flex', alignItems: 'center', gap: 8 }}>
-                                        <item.icon size={14} style={{ opacity: 0.5 }} /> {item.label}
-                                    </span>
-                                    <span style={{ fontSize: 13, fontWeight: 600 }}>{item.value}</span>
-                                </div>
-                            ))}
+                    <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', paddingBottom: 16, borderBottom: '1px solid var(--gray-100)' }}>
+                        <div>
+                            <div style={{ fontWeight: 500 }}>Data Privacy</div>
+                            <div style={{ fontSize: 13, color: 'var(--text-tertiary)' }}>Allow anonymized data for AI training</div>
                         </div>
+                        <input type="checkbox" defaultChecked />
+                    </div>
+                    <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
+                        <div>
+                            <div style={{ fontWeight: 500 }}>Two-Factor Authentication</div>
+                            <div style={{ fontSize: 13, color: 'var(--text-tertiary)' }}>Secure your health data</div>
+                        </div>
+                        <button className="btn-secondary" style={{ color: 'var(--accent)' }}>Enable</button>
                     </div>
                 </div>
             </div>
