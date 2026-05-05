@@ -1,5 +1,5 @@
 "use client";
-import { Search, Bell, Sun, Moon } from 'lucide-react';
+import { Search, Bell, Sun, Moon, Languages } from 'lucide-react';
 import Link from 'next/link';
 import { usePathname } from 'next/navigation';
 import { useTheme } from './ThemeProvider';
@@ -28,6 +28,19 @@ export default function Topbar() {
                 </div>
             </div>
             <div className="topbar-right">
+                <button className="topbar-btn" onClick={() => {
+                    const isHindi = document.cookie.includes('googtrans=/en/hi') || document.cookie.includes('googtrans=/auto/hi');
+                    if (isHindi) {
+                        document.cookie = 'googtrans=/en/en; path=/';
+                        document.cookie = 'googtrans=/en/en; domain=' + window.location.hostname + '; path=/';
+                    } else {
+                        document.cookie = 'googtrans=/en/hi; path=/';
+                        document.cookie = 'googtrans=/en/hi; domain=' + window.location.hostname + '; path=/';
+                    }
+                    window.location.reload();
+                }} title="Translate to Hindi / हिंदी में अनुवाद करें">
+                    <Languages size={16} />
+                </button>
                 <button className="topbar-btn"><Search size={16} /></button>
                 <button className="topbar-btn" style={{ position: 'relative' }}>
                     <Bell size={16} />
@@ -37,7 +50,7 @@ export default function Topbar() {
                     {dark ? <Sun size={16} /> : <Moon size={16} />}
                 </button>
                 <Link href="/profile">
-                    <div className="user-avatar">U</div>
+                    <div className="user-avatar">K</div>
                 </Link>
             </div>
         </header>

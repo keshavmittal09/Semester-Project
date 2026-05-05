@@ -53,10 +53,10 @@ export default function SymptomForm() {
         setIsLoading(true); setStage(0); setResult(null);
 
         try {
-            const r = await fetch(`${API_URL}/api/diagnose`, {
+            const r = await fetch(`${API_URL}/predict`, {
                 method: 'POST',
                 headers: { 'Content-Type': 'application/json' },
-                body: JSON.stringify({ symptoms: [symptoms, ...selectedTags].filter(Boolean).join(', '), selectedTags, age, gender, duration, severity })
+                body: JSON.stringify({ symptoms: [symptoms, ...selectedTags].filter(Boolean) })
             });
             if (!r.ok) throw new Error((await r.json()).detail || 'Diagnosis failed');
             const data = await r.json();

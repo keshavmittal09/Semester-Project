@@ -24,7 +24,16 @@ class XAIEngine:
         self.explainer = None
         if SHAP_AVAILABLE and ml_model.model is not None:
             try:
-                self.explainer = shap.TreeExplainer(ml_model.model)
+                # If VotingClassifier, extract the Random Forest sub-model for SHAP
+                base_model = ml_model.model
+                if hasattr(base_model, 'estimators_'):
+                    from sklearn.ensemble import RandomForestClassifier
+                    for name, est in getattr(base_model, 'named_estimators_', {}).items():
+                        if isinstance(est, RandomForestClassifier):
+                            base_model = est
+                            break
+
+                self.explainer = shap.TreeExplainer(base_model)
                 print("✅ SHAP TreeExplainer initialized.")
             except Exception as e:
                 print(f"⚠️ SHAP TreeExplainer failed: {e}")
@@ -112,9 +121,9 @@ class XAIEngine:
                     })
 
         # Test adding important absent symptoms
-        importances = self.ml_model.model.feature_importances_
+        importances_dict = self.ml_model.get_feature_importances()
         absent_important = [
-            (i, importances[i]) for i in range(len(SYMPTOMS))
+            (i, importances_dict.get(SYMPTOMS[i], 0)) for i in range(len(SYMPTOMS))
             if symptom_vector[i] == 0
         ]
         absent_important.sort(key=lambda x: x[1], reverse=True)

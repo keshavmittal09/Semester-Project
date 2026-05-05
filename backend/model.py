@@ -1,12 +1,19 @@
 """
-ML Model Module — scikit-learn Random Forest Classifier
-Trained on clinically-accurate symptom-disease probability profiles
-based on established medical literature (Harrison's Principles of
-Internal Medicine, Merck Manual, WHO ICD-11 classifications).
+MedAI ML Model Module — Real Dataset Pipeline
+
+Loads the clinical dataset from CSV files, trains an ensemble model
+(Random Forest + XGBoost VotingClassifier), and provides prediction
+with full evaluation metrics.
+
+Data source: Clinical prevalence profiles derived from:
+  - Harrison's Principles of Internal Medicine (21st Ed)
+  - Merck Manual Professional Edition
+  - WHO ICD-11 Clinical Guidelines
+  - CDC Surveillance Data
 """
 import numpy as np
 import pandas as pd
-from sklearn.ensemble import RandomForestClassifier
+from sklearn.ensemble import RandomForestClassifier, VotingClassifier
 from sklearn.model_selection import train_test_split, cross_val_score
 from sklearn.metrics import (
     accuracy_score, precision_score, recall_score, f1_score,
@@ -16,10 +23,12 @@ from sklearn.preprocessing import LabelEncoder
 import joblib
 import os
 import json
+import logging
+
+logger = logging.getLogger("medai.model")
 
 # ─────────────────────────────────────────────────────
 # CLINICAL FEATURE DEFINITIONS
-# Based on standard clinical symptom categories
 # ─────────────────────────────────────────────────────
 SYMPTOMS = [
     "fever", "headache", "cough", "sore_throat", "body_aches",
@@ -39,75 +48,77 @@ DISEASES = [
 ]
 
 # ─────────────────────────────────────────────────────
-# REAL CLINICAL SYMPTOM PROBABILITY PROFILES
-# Source: Harrison's Principles of Internal Medicine (21st Ed),
-#         Merck Manual Professional Edition,
-#         WHO Clinical Guidelines, CDC surveillance data
-#
-# Each value = probability that a patient with the disease
-# presents with that symptom (clinical sensitivity)
+# SYMPTOM NORMALIZATION DICTIONARY (PRD Section 5.2)
+# Maps natural language → canonical symptom names
 # ─────────────────────────────────────────────────────
-DISEASE_PROFILES = {
-    # Influenza (ICD-11: 1E30) — CDC clinical criteria
-    # High fever (>38°C) in 80-100%, headache 85%, myalgia 80%+
-    "Influenza": [0.95, 0.85, 0.58, 0.50, 0.80, 0.75, 0.25, 0.12, 0.06, 0.10, 0.35, 0.85, 0.10, 0.08, 0.45],
-
-    # Common Cold (ICD-11: CA00) — Rhinovirus (most common pathogen)
-    # Rhinorrhea dominant (>90%), mild systemic symptoms
-    "Common Cold": [0.15, 0.25, 0.55, 0.40, 0.10, 0.25, 0.05, 0.05, 0.02, 0.05, 0.92, 0.10, 0.02, 0.02, 0.05],
-
-    # Acute Bronchitis (ICD-11: CA20) — WHO guidelines
-    # Cough predominant (>90%), chest discomfort 50-75%
-    "Acute Bronchitis": [0.40, 0.20, 0.95, 0.25, 0.25, 0.55, 0.08, 0.05, 0.55, 0.65, 0.20, 0.25, 0.05, 0.03, 0.10],
-
-    # Community-Acquired Pneumonia (ICD-11: CA40) — ATS/IDSA guidelines
-    # Fever 80%, productive cough 90%, dyspnea 66-75%
-    "Pneumonia": [0.80, 0.35, 0.90, 0.15, 0.45, 0.80, 0.15, 0.15, 0.65, 0.75, 0.10, 0.55, 0.10, 0.05, 0.20],
-
-    # Acute Gastroenteritis (ICD-11: DA60) — WHO/CDC
-    # Nausea/vomiting 80-90%, diarrhea 85-95%
-    "Gastroenteritis": [0.35, 0.20, 0.05, 0.05, 0.35, 0.55, 0.88, 0.20, 0.10, 0.05, 0.03, 0.15, 0.82, 0.90, 0.15],
-
-    # Migraine (ICD-11: 8A80) — ICHD-3 diagnostic criteria
-    # Unilateral headache 60-70%, nausea 73-80%, photophobia (mapped to dizziness) 70%
-    "Migraine": [0.05, 0.98, 0.02, 0.02, 0.15, 0.45, 0.73, 0.75, 0.05, 0.02, 0.05, 0.05, 0.30, 0.05, 0.08],
-
-    # COVID-19 (ICD-11: RA01) — WHO clinical characterization
-    # Fever 83-99%, cough 59-82%, fatigue 44-70%, dyspnea 31-55%
-    "COVID-19": [0.88, 0.65, 0.72, 0.40, 0.68, 0.70, 0.20, 0.12, 0.15, 0.45, 0.25, 0.50, 0.10, 0.12, 0.45],
-
-    # Strep Pharyngitis (ICD-11: CA02) — Centor criteria / IDSA
-    # Sore throat >95%, fever 75-80%, no cough (absence supports diagnosis)
-    "Strep Pharyngitis": [0.75, 0.45, 0.08, 0.96, 0.25, 0.35, 0.18, 0.10, 0.05, 0.05, 0.08, 0.25, 0.12, 0.03, 0.15],
+SYMPTOM_NORMALIZATION = {
+    "fever": ["fever", "temperature", "hot", "burning up", "pyrexia", "febrile", "bukhar"],
+    "headache": ["headache", "head pain", "migraine", "cephalgia", "head ache", "headech", "headeache", "sir dard"],
+    "cough": ["cough", "coughing", "hack", "dry cough", "wet cough", "productive cough", "khansi"],
+    "sore_throat": ["sore throat", "throat pain", "pharyngitis", "throat", "strep throat", "gala kharab", "gale me dard"],
+    "body_aches": ["body ache", "body pain", "muscle pain", "myalgia", "aching", "badan dard", "body dard"],
+    "fatigue": ["fatigue", "tired", "exhaustion", "weak", "lethargy", "malaise", "low energy", "thakan", "thakawat"],
+    "nausea": ["nausea", "nauseous", "queasy", "sick to stomach", "feel sick", "stomach pain", "stomach ache", "belly ache", "pet dard"],
+    "dizziness": ["dizziness", "dizzy", "lightheaded", "vertigo", "faint", "chakkar"],
+    "chest_pain": ["chest pain", "chest tight", "chest pressure", "pleuritic", "chest discomfort", "chhati me dard"],
+    "shortness_of_breath": ["shortness of breath", "dyspnea", "breathless", "difficulty breathing", "can't breathe", "breathing difficulty", "saans lene me dikkat"],
+    "runny_nose": ["runny nose", "nasal congestion", "stuffy nose", "rhinorrhea", "sneezing", "blocked nose", "jukharm", "jukham", "naak behna", "cold"],
+    "chills": ["chills", "shivering", "rigors", "cold sweats", "shaking", "thand lagna"],
+    "vomiting": ["vomiting", "throwing up", "emesis", "puking", "ulti", "vomit"],
+    "diarrhea": ["diarrhea", "loose stool", "watery stool", "loose motion", "runs", "dast", "diarrhoea"],
+    "joint_pain": ["joint pain", "arthralgia", "stiff joints", "joint ache", "joint stiffness", "jodo me dard"],
 }
 
-MODEL_PATH = os.path.join(os.path.dirname(__file__), "trained_model.joblib")
-EVAL_PATH = os.path.join(os.path.dirname(__file__), "evaluation_metrics.json")
+# ─────────────────────────────────────────────────────
+# PATHS
+# ─────────────────────────────────────────────────────
+BASE_DIR = os.path.dirname(os.path.abspath(__file__))
+DATA_DIR = os.path.join(BASE_DIR, "data")
+TRAIN_CSV = os.path.join(DATA_DIR, "Training.csv")
+TEST_CSV = os.path.join(DATA_DIR, "Testing.csv")
+MODEL_PATH = os.path.join(BASE_DIR, "trained_model.joblib")
+EVAL_PATH = os.path.join(BASE_DIR, "evaluation_metrics.json")
 
 
-def generate_training_dataset(n_samples_per_disease=600, noise=0.08):
-    """
-    Generate training data from clinically-accurate disease profiles.
-    Lower noise (0.08) preserves real clinical relationships better
-    than high noise which would distort medical accuracy.
-    """
-    np.random.seed(42)
-    X_all, y_all = [], []
+def load_dataset():
+    """Load training and testing CSVs. Returns X_train, X_test, y_train, y_test."""
+    if not os.path.exists(TRAIN_CSV):
+        raise FileNotFoundError(
+            f"Training dataset not found at {TRAIN_CSV}. "
+            f"Run: python data/download_dataset.py"
+        )
 
-    for disease, profile in DISEASE_PROFILES.items():
-        for _ in range(n_samples_per_disease):
-            sample = []
-            for prob in profile:
-                noisy_prob = np.clip(prob + np.random.uniform(-noise, noise), 0.01, 0.99)
-                sample.append(1 if np.random.random() < noisy_prob else 0)
-            X_all.append(sample)
-            y_all.append(disease)
+    train_df = pd.read_csv(TRAIN_CSV)
+    logger.info(f"Loaded training data: {train_df.shape}")
 
-    return np.array(X_all), np.array(y_all)
+    # Validate columns
+    for s in SYMPTOMS:
+        if s not in train_df.columns:
+            raise ValueError(f"Missing symptom column: {s}")
+    if "prognosis" not in train_df.columns:
+        raise ValueError("Missing 'prognosis' column in training data")
+
+    X_train = train_df[SYMPTOMS].values
+    y_train = train_df["prognosis"].values
+
+    # Load test set if available
+    if os.path.exists(TEST_CSV):
+        test_df = pd.read_csv(TEST_CSV)
+        X_test = test_df[SYMPTOMS].values
+        y_test = test_df["prognosis"].values
+        logger.info(f"Loaded testing data: {test_df.shape}")
+    else:
+        # Fallback: split training data
+        X_train, X_test, y_train, y_test = train_test_split(
+            X_train, y_train, test_size=0.2, random_state=42, stratify=y_train
+        )
+        logger.info("No test CSV found, using 80/20 split from training data")
+
+    return X_train, X_test, y_train, y_test
 
 
 class HealthcareMLModel:
-    """Healthcare diagnosis ML model with evaluation and SHAP support."""
+    """Healthcare diagnosis ML model with ensemble learning and evaluation."""
 
     def __init__(self):
         self.model = None
@@ -116,47 +127,86 @@ class HealthcareMLModel:
         self._load_or_train()
 
     def _load_or_train(self):
+        """Load saved model or train from dataset."""
         if os.path.exists(MODEL_PATH):
-            saved = joblib.load(MODEL_PATH)
-            self.model = saved["model"]
-            self.label_encoder = saved["label_encoder"]
-            if os.path.exists(EVAL_PATH):
-                with open(EVAL_PATH, "r") as f:
-                    self.evaluation_metrics = json.load(f)
-            print("✅ Loaded pre-trained model from disk.")
+            try:
+                saved = joblib.load(MODEL_PATH)
+                self.model = saved["model"]
+                self.label_encoder = saved["label_encoder"]
+                if os.path.exists(EVAL_PATH):
+                    with open(EVAL_PATH, "r") as f:
+                        self.evaluation_metrics = json.load(f)
+                logger.info("Loaded pre-trained model from disk")
+            except Exception as e:
+                logger.warning(f"Failed to load saved model: {e}. Retraining...")
+                self._train()
         else:
             self._train()
 
     def _train(self):
-        print("🧠 Training ML model on clinical data...")
-        X, y = generate_training_dataset()
-        y_encoded = self.label_encoder.fit_transform(y)
+        """Train ensemble model on the clinical dataset."""
+        logger.info("Training ML ensemble on clinical dataset...")
 
-        X_train, X_test, y_train, y_test = train_test_split(
-            X, y_encoded, test_size=0.2, random_state=42, stratify=y_encoded
-        )
+        X_train, X_test, y_train, y_test = load_dataset()
 
-        self.model = RandomForestClassifier(
+        # Encode labels
+        y_train_enc = self.label_encoder.fit_transform(y_train)
+        y_test_enc = self.label_encoder.transform(y_test)
+
+        # ─── Ensemble: Random Forest + XGBoost ───
+        rf = RandomForestClassifier(
             n_estimators=200,
             max_depth=15,
             min_samples_split=5,
             min_samples_leaf=2,
             random_state=42,
-            n_jobs=-1
+            n_jobs=-1,
         )
-        self.model.fit(X_train, y_train)
 
+        # Try to use XGBoost, fallback to extra RF if not installed
+        try:
+            from xgboost import XGBClassifier
+            xgb = XGBClassifier(
+                n_estimators=200,
+                max_depth=10,
+                learning_rate=0.1,
+                objective="multi:softprob",
+                random_state=42,
+                n_jobs=-1,
+            )
+            self.model = VotingClassifier(
+                estimators=[("rf", rf), ("xgb", xgb)],
+                voting="soft",
+                n_jobs=-1,
+            )
+            model_type = "VotingClassifier (RandomForest + XGBoost)"
+            logger.info("Using ensemble: RandomForest + XGBoost")
+        except ImportError:
+            logger.warning("XGBoost not installed. Using RandomForest only.")
+            self.model = rf
+            model_type = "RandomForestClassifier"
+
+        # Train
+        self.model.fit(X_train, y_train_enc)
+
+        # Evaluate
         y_pred = self.model.predict(X_test)
-        cv_scores = cross_val_score(self.model, X, y_encoded, cv=5, scoring="accuracy")
 
-        accuracy = accuracy_score(y_test, y_pred)
-        precision = precision_score(y_test, y_pred, average="weighted")
-        recall = recall_score(y_test, y_pred, average="weighted")
-        f1 = f1_score(y_test, y_pred, average="weighted")
-        cm = confusion_matrix(y_test, y_pred).tolist()
-        report = classification_report(y_test, y_pred,
-                                        target_names=self.label_encoder.classes_,
-                                        output_dict=True)
+        # Cross-validation on full data
+        X_all = np.vstack([X_train, X_test])
+        y_all = np.concatenate([y_train_enc, y_test_enc])
+        cv_scores = cross_val_score(self.model, X_all, y_all, cv=5, scoring="accuracy")
+
+        accuracy = accuracy_score(y_test_enc, y_pred)
+        precision = precision_score(y_test_enc, y_pred, average="weighted")
+        recall = recall_score(y_test_enc, y_pred, average="weighted")
+        f1 = f1_score(y_test_enc, y_pred, average="weighted")
+        cm = confusion_matrix(y_test_enc, y_pred).tolist()
+        report = classification_report(
+            y_test_enc, y_pred,
+            target_names=self.label_encoder.classes_,
+            output_dict=True
+        )
 
         per_class = {}
         for cls_name in self.label_encoder.classes_:
@@ -182,19 +232,21 @@ class HealthcareMLModel:
             "n_test_samples": len(X_test),
             "n_features": len(SYMPTOMS),
             "feature_names": SYMPTOMS,
-            "model_type": "RandomForestClassifier",
+            "model_type": model_type,
             "n_estimators": 200,
-            "data_source": "Clinical literature (Harrison's, Merck Manual, WHO ICD-11)",
+            "data_source": "Clinical literature (Harrison's, Merck Manual, WHO ICD-11, CDC)",
         }
 
+        # Save model + metrics
         joblib.dump({"model": self.model, "label_encoder": self.label_encoder}, MODEL_PATH)
         with open(EVAL_PATH, "w") as f:
             json.dump(self.evaluation_metrics, f, indent=2)
 
-        print(f"✅ Model trained — Accuracy: {accuracy:.2%}, F1: {f1:.2%}")
-        print(f"   Cross-validation: {cv_scores.mean():.2%} ± {cv_scores.std():.2%}")
+        logger.info(f"Model trained — Accuracy: {accuracy:.2%}, F1: {f1:.2%}")
+        logger.info(f"Cross-validation: {cv_scores.mean():.2%} +/- {cv_scores.std():.2%}")
 
     def predict(self, symptom_vector):
+        """Run prediction on a symptom vector. Returns disease + probabilities."""
         X = np.array(symptom_vector).reshape(1, -1)
         proba = self.model.predict_proba(X)[0]
         pred_idx = np.argmax(proba)
@@ -214,10 +266,24 @@ class HealthcareMLModel:
         }
 
     def get_decision_path(self, symptom_vector):
+        """Extract decision path from tree estimators for explainability."""
         X = np.array(symptom_vector).reshape(1, -1)
         paths = []
-        for tree_idx in range(min(3, len(self.model.estimators_))):
-            tree = self.model.estimators_[tree_idx]
+
+        # Get the RF estimator (either standalone or from ensemble)
+        rf_model = self.model
+        if hasattr(self.model, 'estimators_') and isinstance(self.model, VotingClassifier):
+            # VotingClassifier — get the RF sub-model
+            for name, est in self.model.named_estimators_.items():
+                if isinstance(est, RandomForestClassifier):
+                    rf_model = est
+                    break
+
+        if not isinstance(rf_model, RandomForestClassifier):
+            return paths
+
+        for tree_idx in range(min(3, len(rf_model.estimators_))):
+            tree = rf_model.estimators_[tree_idx]
             node_indicator = tree.decision_path(X)
             feature = tree.tree_.feature
             threshold = tree.tree_.threshold
@@ -237,13 +303,27 @@ class HealthcareMLModel:
         return paths
 
     def get_feature_importances(self):
-        importances = self.model.feature_importances_
+        """Get global feature importances from the model."""
+        if hasattr(self.model, 'estimators_') and isinstance(self.model, VotingClassifier):
+            # Average importances from RF + XGBoost
+            importances = np.zeros(len(SYMPTOMS))
+            count = 0
+            for name, est in self.model.named_estimators_.items():
+                if hasattr(est, 'feature_importances_'):
+                    importances += est.feature_importances_
+                    count += 1
+            if count > 0:
+                importances /= count
+        else:
+            importances = self.model.feature_importances_
+
         return {
             SYMPTOMS[i]: round(float(importances[i]) * 100, 2)
             for i in np.argsort(importances)[::-1]
         }
 
     def compute_trust_score(self, symptom_vector, prediction_result):
+        """Compute multi-factor trust score."""
         confidence = prediction_result["confidence"]
         probs = list(prediction_result["all_probabilities"].values())
         margin = probs[0] - probs[1] if len(probs) > 1 else probs[0]
@@ -279,32 +359,18 @@ class HealthcareMLModel:
 
 
 def parse_symptoms_to_vector(symptom_text, selected_tags=None):
+    """
+    Parse natural language symptoms into a binary feature vector.
+    Uses the normalization dictionary for robust matching.
+    """
     text = symptom_text.lower() if symptom_text else ""
     tags = [t.lower().replace(" ", "_") for t in (selected_tags or [])]
-
-    keyword_map = {
-        "fever": ["fever", "temperature", "hot", "burning up", "pyrexia"],
-        "headache": ["headache", "head pain", "migraine", "cephalgia"],
-        "cough": ["cough", "coughing", "hack"],
-        "sore_throat": ["sore throat", "throat pain", "pharyngitis", "throat"],
-        "body_aches": ["body ache", "body pain", "muscle pain", "myalgia"],
-        "fatigue": ["fatigue", "tired", "exhaustion", "weak", "lethargy", "malaise"],
-        "nausea": ["nausea", "nauseous", "queasy", "sick to stomach"],
-        "dizziness": ["dizziness", "dizzy", "lightheaded", "vertigo"],
-        "chest_pain": ["chest pain", "chest tight", "chest pressure", "pleuritic"],
-        "shortness_of_breath": ["shortness of breath", "dyspnea", "breathless", "difficulty breathing"],
-        "runny_nose": ["runny nose", "nasal congestion", "stuffy nose", "rhinorrhea", "sneezing"],
-        "chills": ["chills", "shivering", "rigors", "cold sweats"],
-        "vomiting": ["vomiting", "throwing up", "emesis"],
-        "diarrhea": ["diarrhea", "loose stool", "watery stool"],
-        "joint_pain": ["joint pain", "arthralgia", "stiff joints", "joint ache"],
-    }
 
     vector = []
     for symptom in SYMPTOMS:
         if symptom in tags:
             vector.append(1)
-        elif any(kw in text for kw in keyword_map.get(symptom, [symptom])):
+        elif any(kw in text for kw in SYMPTOM_NORMALIZATION.get(symptom, [symptom])):
             vector.append(1)
         else:
             vector.append(0)
