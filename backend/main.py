@@ -182,6 +182,11 @@ async def _run_diagnosis_pipeline(symptom_vector: list, symptoms_text: str):
 
 # ─── API Endpoints ───
 
+@app.get("/")
+async def root():
+    """Root endpoint for Render health checks."""
+    return {"status": "MedAI Backend is running!"}
+
 @app.get("/api/health")
 async def health_check():
     """Health check endpoint."""
