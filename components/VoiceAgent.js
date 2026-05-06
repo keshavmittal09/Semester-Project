@@ -154,7 +154,7 @@ SAFETY RULES:
                 },
                 voice: {
                     provider: "11labs",
-                    voiceId: "cgSgspJ2msm6clMCkdW9",
+                    voiceId: "2F1KINpxsttim2WfMbVs", 
                 }
             });
         }
