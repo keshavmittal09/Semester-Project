@@ -153,8 +153,8 @@ SAFETY RULES:
 - If symptoms are serious (chest pain, breathing issues), advise immediate medical help`
                 },
                 voice: {
-                    provider: "11labs",
-                    voiceId: "2F1KINpxsttim2WfMbVs", 
+                    provider: "openai",
+                    voiceId: "nova", 
                 }
             });
         }
